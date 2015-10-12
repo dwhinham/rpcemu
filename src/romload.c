@@ -25,14 +25,14 @@
  */
 static int cmpstringp(const void *p1, const void *p2)
 {
-        /* The actual arguments to this function are "pointers to
-           pointers to char", so assign to variables of this type.
-           Then we dereference as we pass them to strcmp(). */
+	/* The actual arguments to this function are "pointers to
+	   pointers to char", so assign to variables of this type.
+	   Then we dereference as we pass them to strcmp(). */
 
-        const char * const *pstr1 = p1;
-        const char * const *pstr2 = p2;
+	const char * const *pstr1 = p1;
+	const char * const *pstr2 = p2;
 
-        return strcmp(*pstr1, *pstr2);
+	return strcmp(*pstr1, *pstr2);
 }
 
 /**
@@ -40,14 +40,14 @@ static int cmpstringp(const void *p1, const void *p2)
  */
 void loadroms(void)
 {
-        int finished;
-        int number_of_files = 0;
-        int c;
-        int pos = 0;
-        struct al_ffblk ff;
-        const char *wildcard = "*.*";
-        const char *dirname = "roms";
-        char *romfilenames[MAXROMS];
+	int number_of_files = 0;
+	int c;
+	int pos = 0;
+	ALLEGRO_FS_ENTRY* dir_entry;
+	ALLEGRO_FS_ENTRY* file_entry;
+	const char *wildcard = "*.*";
+	const char *dirname = "roms";
+	char *romfilenames[MAXROMS];
 	char romdirectory[512];
 	char searchwildcard[512];
 
@@ -57,84 +57,91 @@ void loadroms(void)
 	/* Build a search string */
 	snprintf(searchwildcard, sizeof(searchwildcard), "%s%s", romdirectory, wildcard);
 
-        /* Scan directory for ROM files */
-        finished = al_findfirst(searchwildcard, &ff, 0xffff & ~FA_DIREC);
-        while (!finished && number_of_files < MAXROMS)
-        {
-                const char *ext = get_extension(ff.name);
-                /* Skip files with a .txt extension or starting with '.' */
-                if (stricmp(ext,"txt") && ff.name[0] != '.')
-                {
-                        romfilenames[number_of_files] = strdup(ff.name);
-                        if (romfilenames[number_of_files] == NULL) {
-                                fatal("Out of memory in loadroms()");
-                        }
-                        number_of_files++;
-                }
-                finished = al_findnext(&ff);
-        }
-        al_findclose(&ff);
+	/* Scan directory for ROM files */
+	dir_entry = al_create_fs_entry(romdirectory);
+	if (!al_open_directory(dir_entry))
+		fatal("Could not open ROM directory!");
 
-        /* Empty directory? or only .txt files? */
-        if (number_of_files == 0) {
-                fatal("Could not load ROM files from directory '%s'\n\n"
-                      ROM_WEB_SITE_STRING "\n",
-                      dirname);
-        }
+	file_entry = al_read_directory(dir_entry);
+	while (file_entry && number_of_files < MAXROMS)
+	{
+		const char *file_name = al_get_fs_entry_name(file_entry);
+		const char *ext = strrchr(file_name, '.');
+		/* Skip files with a .txt extension or starting with '.' */
+		if (!(al_get_fs_entry_mode(file_entry) & ALLEGRO_FILEMODE_ISDIR) && strcasecmp(ext, "txt") && file_name[0] != '.')
+		{
+			romfilenames[number_of_files] = strdup(file_name);
+			if (romfilenames[number_of_files] == NULL) {
+				fatal("Out of memory in loadroms()");
+			}
+			number_of_files++;
+		}
+		al_destroy_fs_entry(file_entry);
+		file_entry = al_read_directory(dir_entry);
+	}
+	al_close_directory(dir_entry);
+	al_destroy_fs_entry(dir_entry);
 
-        /* Sort filenames into alphabetical order */
-        qsort(romfilenames, number_of_files, sizeof(char *), cmpstringp);
+	/* Empty directory? or only .txt files? */
+	if (number_of_files == 0) {
+		fatal("Could not load ROM files from directory '%s'\n\n"
+			  ROM_WEB_SITE_STRING "\n",
+			  dirname);
+	}
 
-        /* Load files */
-        for (c = 0; c < number_of_files; c++) {
-                FILE *f;
-                int len;
-                char filepath[512];
+	/* Sort filenames into alphabetical order */
+	qsort(romfilenames, number_of_files, sizeof(char *), cmpstringp);
 
-                snprintf(filepath, sizeof(filepath), "%s%s", romdirectory, romfilenames[c]);
+	/* Load files */
+	for (c = 0; c < number_of_files; c++) {
+		FILE *f;
+		int len;
+		char filepath[512];
 
-                f = fopen(filepath, "rb");
-                if (f == NULL) {
-                        fatal("Can't open ROM file '%s': %s", filepath,
-                              strerror(errno));
-                }
+		snprintf(filepath, sizeof(filepath), "%s%s", romdirectory, romfilenames[c]);
 
-                /* Calculate file size */
-                fseek(f, 0, SEEK_END);
-                len = ftell(f);
+		f = fopen(filepath, "rb");
+		if (f == NULL) {
+			fatal("Can't open ROM file '%s': %s", filepath,
+				  strerror(errno));
+		}
 
-                if (pos + len > ROMSIZE) {
-                        fatal("ROM files larger than 8MB");
-                }
+		/* Calculate file size */
+		fseek(f, 0, SEEK_END);
+		len = ftell(f);
 
-                /* Read file data */
-                rewind(f);
-                if (fread(&romb[pos], len, 1, f) != 1) {
-                        fatal("Error reading from ROM file '%s': %s",
-                              romfilenames[c], strerror(errno));
-                }
+		if (pos + len > ROMSIZE) {
+			fatal("ROM files larger than 8MB");
+		}
 
-                fclose(f);
+		/* Read file data */
+		rewind(f);
+		if (fread(&romb[pos], len, 1, f) != 1) {
+			fatal("Error reading from ROM file '%s': %s",
+				  romfilenames[c], strerror(errno));
+		}
+
+		fclose(f);
 
 		rpclog("romload: Loaded '%s' %d bytes\n", romfilenames[c], len);
 
-                pos += len;
+		pos += len;
 
-                /* Free up filename allocated earlier */
-                free(romfilenames[c]);
-        }
+		/* Free up filename allocated earlier */
+		free(romfilenames[c]);
+	}
 
-        /* Reject ROMs that are not sensible sizes
-         * Allow 2MB (RISC OS 3.50)
-         *       4MB (RISC OS 3.60 -> Half way through Select)
-         *       6MB (Later Select)
-         *       8MB (Current maximum)
-         */
-        if (pos != (2 * 1024 * 1024) && pos != (4 * 1024 * 1024)
-            && pos != (6 * 1024 * 1024) && pos != (8 * 1024 * 1024))
-        {
-                fatal("ROM Image of unsupported size: expecting 2MB, 4MB, 6MB or 8MB, got %d bytes", pos);
-        }
+	/* Reject ROMs that are not sensible sizes
+	 * Allow 2MB (RISC OS 3.50)
+	 *	   4MB (RISC OS 3.60 -> Half way through Select)
+	 *	   6MB (Later Select)
+	 *	   8MB (Current maximum)
+	 */
+	if (pos != (2 * 1024 * 1024) && pos != (4 * 1024 * 1024)
+		&& pos != (6 * 1024 * 1024) && pos != (8 * 1024 * 1024))
+	{
+		fatal("ROM Image of unsupported size: expecting 2MB, 4MB, 6MB or 8MB, got %d bytes", pos);
+	}
 
 	rpclog("romload: Total ROM size %d MB\n", pos / 1048576);
 
@@ -144,18 +151,18 @@ void loadroms(void)
 		uint32_t temp = rom[c >> 2];
 
 		rom[c >> 2] = (temp >> 24) |
-		              ((temp >> 8) & 0x0000ff00) |
-		              ((temp << 8) & 0x00ff0000) |
-		              (temp << 24);
+				  ((temp >> 8) & 0x0000ff00) |
+				  ((temp << 8) & 0x00ff0000) |
+				  (temp << 24);
 	}
 #endif
 
 	/* Patch ROM for 8MB VRAM */
 	/* (RISC OS 4.02) */
 	if (rom[0x14744 >> 2] == 0xe3a00402 &&
-	    rom[0x14748 >> 2] == 0xe2801004 &&
-	    rom[0x1474c >> 2] == 0xeb000148 &&
-	    rom[0x14750 >> 2] == 0x03a06002)
+		rom[0x14748 >> 2] == 0xe2801004 &&
+		rom[0x1474c >> 2] == 0xeb000148 &&
+		rom[0x14750 >> 2] == 0x03a06002)
 	{
 		rom[0x14750 >> 2] = 0x03a06008; /* MOVEQ r6, #8 */
 	}

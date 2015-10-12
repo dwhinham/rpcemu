@@ -806,12 +806,17 @@ iomd_mouse_buttons_read(void)
         /* 'mouse_b' and 'key' are Allegro variables containing
            the current host OS mouse and keyboard state */
 
+	ALLEGRO_KEYBOARD_STATE keyboard_state;
+	ALLEGRO_MOUSE_STATE mouse_state;
+	al_get_keyboard_state(&keyboard_state);
+	al_get_mouse_state(&mouse_state);
+
 	/* Left */
-	if (mouse_b & 1) {
+	if (al_mouse_button_down(&mouse_state, 1)) {
 		temp |= 0x40; // bit 7
 	}
 	/* Middle */
-	if ((mouse_b & 4) || key[KEY_MENU] || key[KEY_ALTGR]) {
+	if (al_mouse_button_down(&mouse_state, 3) || al_key_down(&keyboard_state, ALLEGRO_KEY_MENU) || al_key_down(&keyboard_state, ALLEGRO_KEY_ALTGR)) {
 		if (config.mousetwobutton) {
 			temp |= 0x10; // bit 5
 		} else {
@@ -819,7 +824,7 @@ iomd_mouse_buttons_read(void)
 		}
 	}
 	/* Right */
-	if (mouse_b & 2) {
+	if (al_mouse_button_down(&mouse_state, 2)) {
 		if (config.mousetwobutton) {
 			temp |= 0x20; // bit 6
 		} else {

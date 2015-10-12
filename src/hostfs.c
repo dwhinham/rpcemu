@@ -50,7 +50,7 @@
 # define mkdir(name, mode) _mkdir(name)
 #endif
 
-typedef int bool;
+//typedef int bool;
 
 #define true  ((bool) 1)
 #define false ((bool) 0)

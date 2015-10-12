@@ -372,14 +372,14 @@ keyboard_data_read(void)
 void
 mouse_control_write(uint8_t v)
 {
-//        printf("Write mouse enable %02X\n",v);
+//	printf("Write mouse enable %02X\n",v);
 
-        v &= PS2_CONTROL_ENABLE;
-        if (v)// && !msenable)
-        {
-                msreset=1;
-                mcallback=20;
-        }
+	v &= PS2_CONTROL_ENABLE;
+	if (v)// && !msenable)
+	{
+		msreset=1;
+		mcallback=20;
+	}
 	if (v)
 		msstat |= PS2_CONTROL_ENABLE;
 	else
@@ -394,25 +394,25 @@ mouse_control_write(uint8_t v)
 void
 mouse_data_write(uint8_t val)
 {
-        /* Set BUSY flag, clear EMPTY flag */
-        msstat = (msstat & 0x3f) | PS2_CONTROL_TX_BUSY;
+	/* Set BUSY flag, clear EMPTY flag */
+	msstat = (msstat & 0x3f) | PS2_CONTROL_TX_BUSY;
 
 	mouse_irq_tx_lower();
 
-        justsent=1;
-        if (msincommand)
-        {
-                switch (msincommand)
-                {
+	justsent=1;
+	if (msincommand)
+	{
+		switch (msincommand)
+		{
 		/* Certain commands are followed by a data byte that
 		   also needs to be acknowledged */
-                case AUX_SET_RES:
+		case AUX_SET_RES:
 			ps2_queue(&msqueue, AUX_ACK);
 			msincommand = 0;
 			mcallback = 20;
 			return;
 
-                case AUX_SET_SAMPLE:
+		case AUX_SET_SAMPLE:
 			/* Special values to set sample are used to place
 			   the mouse into Intellimouse or Intellimouse Explorer
 			   mode */
@@ -444,68 +444,68 @@ mouse_data_write(uint8_t val)
 
 			ps2_queue(&msqueue, AUX_ACK);
 			msincommand = 0;
-                        mcallback = 20;
-                        return;
-                }
-        }
-        else
-        {
-                switch (val)
-                {
-                case AUX_RESET:
-                        msreset=2;
+			mcallback = 20;
+			return;
+		}
+	}
+	else
+	{
+		switch (val)
+		{
+		case AUX_RESET:
+			msreset=2;
 
 			/* Turn off Stream Mode */
-                        mousepoll = 0;
-
-                        mcallback=20;
-                        break;
-
-                case AUX_RESEND:
-                        mcallback=150;
-                        break;
-
-                case AUX_ENABLE_DEV:
-	                ps2_queue(&msqueue, AUX_ACK);
-
-			/* Turn on Stream Mode */
-	                mousepoll = 1;
+			mousepoll = 0;
 
 			mcallback=20;
-                        break;
+			break;
 
-                case AUX_SET_SAMPLE:
-                        msincommand = AUX_SET_SAMPLE;
+		case AUX_RESEND:
+			mcallback=150;
+			break;
+
+		case AUX_ENABLE_DEV:
 			ps2_queue(&msqueue, AUX_ACK);
-                        mcallback=20;
-                        break;
 
-                case AUX_GET_TYPE:
+			/* Turn on Stream Mode */
+			mousepoll = 1;
+
+			mcallback=20;
+			break;
+
+		case AUX_SET_SAMPLE:
+			msincommand = AUX_SET_SAMPLE;
+			ps2_queue(&msqueue, AUX_ACK);
+			mcallback=20;
+			break;
+
+		case AUX_GET_TYPE:
 			ps2_queue(&msqueue, AUX_ACK);
 			ps2_queue(&msqueue, mouse_type);
-                        mcallback=20;
-                        break;
+			mcallback=20;
+			break;
 
-                case AUX_SET_RES:
-                        msincommand = AUX_SET_RES;
+		case AUX_SET_RES:
+			msincommand = AUX_SET_RES;
 			ps2_queue(&msqueue, AUX_ACK);
-                        mcallback=20;
-                        break;
+			mcallback=20;
+			break;
 
-                case AUX_SET_SCALE21:
+		case AUX_SET_SCALE21:
 			ps2_queue(&msqueue, AUX_ACK);
-                        mcallback=20;
-                        break;
+			mcallback=20;
+			break;
 
-                case AUX_SET_SCALE11:
+		case AUX_SET_SCALE11:
 			ps2_queue(&msqueue, AUX_ACK);
-                        mcallback=20;
-                        break;
+			mcallback=20;
+			break;
 
-                default:
-                        fatal("Bad mouse command %02X\n", val);
-                }
-        }
+		default:
+			fatal("Bad mouse command %02X\n", val);
+		}
+	}
 }
 
 /**
@@ -516,7 +516,7 @@ mouse_data_write(uint8_t val)
 uint8_t
 mouse_status_read(void)
 {
-        return msstat;
+	return msstat;
 }
 
 /**
@@ -527,20 +527,20 @@ mouse_status_read(void)
 uint8_t
 mouse_data_read(void)
 {
-        uint8_t temp = msdata;
+	uint8_t temp = msdata;
 
-        msstat &= ~PS2_CONTROL_RX_FULL;
+	msstat &= ~PS2_CONTROL_RX_FULL;
 
-        mouse_irq_rx_lower();
+	mouse_irq_rx_lower();
 
 	/* If there's still more data to send, make sure to call us back the
 	   next time */
 	if (msqueue.count != 0) {
-                mcallback = 20;
-        }
+		mcallback = 20;
+	}
 
-        msdata = 0;
-        return temp;
+	msdata = 0;
+	return temp;
 }
 
 /**
@@ -550,11 +550,11 @@ mouse_data_read(void)
 static void
 mouse_send(uint8_t v)
 {
-        msdata = v;
+	msdata = v;
 
-        mouse_irq_rx_raise();
+	mouse_irq_rx_raise();
 
-        msstat |= PS2_CONTROL_RX_FULL;
+	msstat |= PS2_CONTROL_RX_FULL;
 
 	if (calculateparity(v))
 		msstat |= PS2_CONTROL_RXPARITY;
@@ -573,50 +573,50 @@ mouse_ps2_callback(void)
 {
 	assert(mcallback == 0);
 
-        /* Set EMPTY Flag, clear BUSY flag */
-        msstat = (msstat & 0x3f) | PS2_CONTROL_TX_EMPTY;
+	/* Set EMPTY Flag, clear BUSY flag */
+	msstat = (msstat & 0x3f) | PS2_CONTROL_TX_EMPTY;
 
-        if (justsent)
-        {
+	if (justsent)
+	{
 		mouse_irq_tx_raise();
 
-                justsent=0;
-        }
+		justsent=0;
+	}
 
-        if (msreset==1)
-        {
+	if (msreset==1)
+	{
 		mouse_irq_tx_raise();
 
-                msreset=3;
-                msstat |= PS2_CONTROL_TX_EMPTY;      /* This should be pointless - always set above */
-                mcallback=20;
-        }
-        else if (msreset==2)
-        {
-                msreset=3;
-                mouse_send(AUX_ACK);
-                mcallback=40;
-        }
-        else if (msreset==3)
-        {
-                mcallback=20;
-                mouse_send(AUX_TEST_OK);
-                msreset=4;
-        }
-        else if (msreset==4)
-        {
-                msreset=0;
-                mouse_send(0);
-                mcallback=0;
-        }
-        else
-        {
+		msreset=3;
+		msstat |= PS2_CONTROL_TX_EMPTY;      /* This should be pointless - always set above */
+		mcallback=20;
+	}
+	else if (msreset==2)
+	{
+		msreset=3;
+		mouse_send(AUX_ACK);
+		mcallback=40;
+	}
+	else if (msreset==3)
+	{
+		mcallback=20;
+		mouse_send(AUX_TEST_OK);
+		msreset=4;
+	}
+	else if (msreset==4)
+	{
+		msreset=0;
+		mouse_send(0);
+		mcallback=0;
+	}
+	else
+	{
 		/* For the callback to be sent, there must be some PS/2 data to send */
 		assert(msqueue.count > 0);
 
 		/* Send the next byte of PS/2 data to the host */
-                mouse_send(ps2_read_data(&msqueue));
-        }
+		mouse_send(ps2_read_data(&msqueue));
+	}
 }
 
 /**
@@ -631,12 +631,18 @@ mouse_ps2_callback(void)
 void
 mouse_poll(void)
 {
+	ALLEGRO_MOUSE_STATE mouse_state;
+	ALLEGRO_KEYBOARD_STATE keyboard_state;
 	static uint8_t oldmouseb = 0;
 	static int oldz = 0;
 	int x, y;
 	int z, tmpz;
-	uint8_t mouseb = mouse_b & 7; /* Allegro */
+	uint8_t mouseb; /* Allegro */
 	uint8_t b;
+
+	al_get_mouse_state(&mouse_state);
+	al_get_keyboard_state(&keyboard_state);
+	mouseb = mouse_state.buttons & 7;
 
 	/* In mousehack mode all movement data is sent via the SWI callbacks */
 	if (mousehack) {
@@ -646,26 +652,26 @@ mouse_poll(void)
 	}
 
 	/* Use the 'Menu' key on the keyboard as a fake Menu mouse click */
-	if (key[KEY_MENU] || key[KEY_ALTGR]) {
+	if (al_key_down(&keyboard_state, ALLEGRO_KEY_MENU) || al_key_down(&keyboard_state, ALLEGRO_KEY_ALTGR)) {
 		mouseb |= 4;
 	}
 
-	/* Get the relative X/Y movements since the last call to get_mouse_mickeys() */
-	get_mouse_mickeys(&x, &y); /* Allegro */
-
 	/* Get the absolute value of the scroll wheel position */
-	z = mouse_z; /* Allegro */
+	z = al_get_mouse_state_axis(&mouse_state, 2); /* Allegro */
 
 	/* Update quadrature mouse */
-	iomd.mousex += x;
-	iomd.mousey -= y; /* Allegro and RPC Y axis go in opposite directions */
+	iomd.mousex = al_get_mouse_state_axis(&mouse_state, 0); /* Allegro */
+	iomd.mousey = al_get_mouse_state_axis(&mouse_state, 1); /* Allegro */
 
-        if (mousecapture) position_mouse(getxs()>>1,getys()>>1);
+	if (mousecapture) {
+		al_set_mouse_axis(0, getxs()>>1);
+		al_set_mouse_axis(1, getys()>>1);
+	}
 
-        /* Return if not PS/2 mouse */
-        if (machine.model != Model_A7000 && machine.model != Model_A7000plus && machine.model != Model_Phoebe) {
-                return;
-        }
+	/* Return if not PS/2 mouse */
+	if (machine.model != Model_A7000 && machine.model != Model_A7000plus && machine.model != Model_Phoebe) {
+		return;
+	}
 
 	/* Are we in PS/2 Stream Mode? */
 	if (!mousepoll) {
@@ -679,16 +685,16 @@ mouse_poll(void)
 		return;
 	}
 
-        oldmouseb=mouseb;
+	oldmouseb=mouseb;
 
 	/* Maximum range you can fit in one PS/2 movement packet is -256 to 255 */
-        if (x<-256) x=-256;
-        if (x>255) x=255;
-        if (y<-256) y=-256;
-        if (y>255) y=255;
+	if (x<-256) x=-256;
+	if (x>255) x=255;
+	if (y<-256) y=-256;
+	if (y>255) y=255;
 
-        y^=0xFFFFFFFF;
-        y++;
+	y^=0xFFFFFFFF;
+	y++;
 
 	/* Calculate relative scrollwheel position from last call */
 	tmpz = oldz - z;
@@ -749,40 +755,40 @@ mouse_poll(void)
 
 static const int standardkeys[][2]=
 {
-        {KEY_A,0x1C},{KEY_B,0x32},{KEY_C,0x21},{KEY_D,0x23},
-        {KEY_E,0x24},{KEY_F,0x2B},{KEY_G,0x34},{KEY_H,0x33},
-        {KEY_I,0x43},{KEY_J,0x3B},{KEY_K,0x42},{KEY_L,0x4B},
-        {KEY_M,0x3A},{KEY_N,0x31},{KEY_O,0x44},{KEY_P,0x4D},
-        {KEY_Q,0x15},{KEY_R,0x2D},{KEY_S,0x1B},{KEY_T,0x2C},
-        {KEY_U,0x3C},{KEY_V,0x2A},{KEY_W,0x1D},{KEY_X,0x22},
-        {KEY_Y,0x35},{KEY_Z,0x1A},{KEY_0,0x45},{KEY_1,0x16},
-        {KEY_2,0x1E},{KEY_3,0x26},{KEY_4,0x25},{KEY_5,0x2E},
-        {KEY_6,0x36},{KEY_7,0x3D},{KEY_8,0x3E},{KEY_9,0x46},
-        {KEY_F1,0x05},{KEY_F2,0x06},{KEY_F3,0x04},{KEY_F4,0x0C},
-        {KEY_F5,0x03},{KEY_F6,0x0B},{KEY_F7,0x83},{KEY_F8,0x0A},
-        {KEY_F9,0x01},{KEY_F10,0x09},{KEY_F11,0x78},{KEY_F12,0x07},
-        {KEY_ENTER,0x5A},{KEY_ESC,0x76},{KEY_STOP,0x49},{KEY_COMMA,0x41},
-        {KEY_SLASH,0x4A},{KEY_OPENBRACE,0x54},{KEY_CLOSEBRACE,0x5B},
-        {KEY_SPACE,0x29},{KEY_TAB,0x0D},{KEY_CAPSLOCK,0x58},{KEY_BACKSPACE,0x66},
-        {KEY_MINUS,0x4E},{KEY_EQUALS,0x55},
-        {KEY_LSHIFT,0x12},{KEY_LCONTROL,0x14},{KEY_ALT,0x11},{KEY_RSHIFT,0x59},
-        {KEY_COLON,0x4C},{KEY_QUOTE,0x52},{KEY_TILDE,0x0E},
-        {KEY_ASTERISK,0x7C},{KEY_MINUS_PAD,0x7B},{KEY_PLUS_PAD,0x79},
-        {KEY_DEL_PAD,0x71},{KEY_0_PAD,0x70},{KEY_1_PAD,0x69},{KEY_2_PAD,0x72},
-        {KEY_3_PAD,0x7A},{KEY_4_PAD,0x6B},{KEY_5_PAD,0x73},{KEY_6_PAD,0x74},
-        {KEY_7_PAD,0x6C},{KEY_8_PAD,0x75},{KEY_9_PAD,0x7D},{KEY_NUMLOCK,0x77},
-        {KEY_SCRLOCK,0x7E},
-        {KEY_SEMICOLON,0x4C},
-        /* Workaround apparent Allegro bug where keymappings differ between
-           Windows and Linux: results in \ and # being swapped */
+	{ALLEGRO_KEY_A,0x1C},{ALLEGRO_KEY_B,0x32},{ALLEGRO_KEY_C,0x21},{ALLEGRO_KEY_D,0x23},
+	{ALLEGRO_KEY_E,0x24},{ALLEGRO_KEY_F,0x2B},{ALLEGRO_KEY_G,0x34},{ALLEGRO_KEY_H,0x33},
+	{ALLEGRO_KEY_I,0x43},{ALLEGRO_KEY_J,0x3B},{ALLEGRO_KEY_K,0x42},{ALLEGRO_KEY_L,0x4B},
+	{ALLEGRO_KEY_M,0x3A},{ALLEGRO_KEY_N,0x31},{ALLEGRO_KEY_O,0x44},{ALLEGRO_KEY_P,0x4D},
+	{ALLEGRO_KEY_Q,0x15},{ALLEGRO_KEY_R,0x2D},{ALLEGRO_KEY_S,0x1B},{ALLEGRO_KEY_T,0x2C},
+	{ALLEGRO_KEY_U,0x3C},{ALLEGRO_KEY_V,0x2A},{ALLEGRO_KEY_W,0x1D},{ALLEGRO_KEY_X,0x22},
+	{ALLEGRO_KEY_Y,0x35},{ALLEGRO_KEY_Z,0x1A},{ALLEGRO_KEY_0,0x45},{ALLEGRO_KEY_1,0x16},
+	{ALLEGRO_KEY_2,0x1E},{ALLEGRO_KEY_3,0x26},{ALLEGRO_KEY_4,0x25},{ALLEGRO_KEY_5,0x2E},
+	{ALLEGRO_KEY_6,0x36},{ALLEGRO_KEY_7,0x3D},{ALLEGRO_KEY_8,0x3E},{ALLEGRO_KEY_9,0x46},
+	{ALLEGRO_KEY_F1,0x05},{ALLEGRO_KEY_F2,0x06},{ALLEGRO_KEY_F3,0x04},{ALLEGRO_KEY_F4,0x0C},
+	{ALLEGRO_KEY_F5,0x03},{ALLEGRO_KEY_F6,0x0B},{ALLEGRO_KEY_F7,0x83},{ALLEGRO_KEY_F8,0x0A},
+	{ALLEGRO_KEY_F9,0x01},{ALLEGRO_KEY_F10,0x09},{ALLEGRO_KEY_F11,0x78},{ALLEGRO_KEY_F12,0x07},
+	{ALLEGRO_KEY_ENTER,0x5A},{ALLEGRO_KEY_ESCAPE,0x76},{ALLEGRO_KEY_FULLSTOP,0x49},{ALLEGRO_KEY_COMMA,0x41},
+	{ALLEGRO_KEY_SLASH,0x4A},{ALLEGRO_KEY_OPENBRACE,0x54},{ALLEGRO_KEY_CLOSEBRACE,0x5B},
+	{ALLEGRO_KEY_SPACE,0x29},{ALLEGRO_KEY_TAB,0x0D},{ALLEGRO_KEY_CAPSLOCK,0x58},{ALLEGRO_KEY_BACKSPACE,0x66},
+	{ALLEGRO_KEY_MINUS,0x4E},{ALLEGRO_KEY_EQUALS,0x55},
+	{ALLEGRO_KEY_LSHIFT,0x12},{ALLEGRO_KEY_LCTRL,0x14},{ALLEGRO_KEY_ALT,0x11},{ALLEGRO_KEY_RSHIFT,0x59},
+	{ALLEGRO_KEY_COLON2,0x4C},{ALLEGRO_KEY_QUOTE,0x52},{ALLEGRO_KEY_TILDE,0x0E},
+	{ALLEGRO_KEY_PAD_ASTERISK,0x7C},{ALLEGRO_KEY_PAD_MINUS,0x7B},{ALLEGRO_KEY_PAD_PLUS,0x79},
+	{ALLEGRO_KEY_PAD_DELETE,0x71},{ALLEGRO_KEY_PAD_0,0x70},{ALLEGRO_KEY_PAD_1,0x69},{ALLEGRO_KEY_PAD_2,0x72},
+	{ALLEGRO_KEY_PAD_3,0x7A},{ALLEGRO_KEY_PAD_4,0x6B},{ALLEGRO_KEY_PAD_5,0x73},{ALLEGRO_KEY_PAD_6,0x74},
+	{ALLEGRO_KEY_PAD_7,0x6C},{ALLEGRO_KEY_PAD_8,0x75},{ALLEGRO_KEY_PAD_9,0x7D},{ALLEGRO_KEY_NUMLOCK,0x77},
+	{ALLEGRO_KEY_SCROLLLOCK,0x7E},
+	{ALLEGRO_KEY_SEMICOLON,0x4C},
+	/* Workaround apparent Allegro bug where keymappings differ between
+	   Windows and Linux: results in \ and # being swapped */
 #if defined(WIN32) || defined(_WIN32)
-        {KEY_BACKSLASH,0x5D},
-        {KEY_BACKSLASH2,0x61},
+	{ALLEGRO_KEY_BACKSLASH,0x5D},
+	{ALLEGRO_KEY_BACKSLASH2,0x61},
 #else
-        {KEY_BACKSLASH,0x61},
-        {KEY_BACKSLASH2,0x5D},
+	{ALLEGRO_KEY_BACKSLASH,0x61},
+	{ALLEGRO_KEY_BACKSLASH2,0x5D},
 #endif
-        {-1,-1}
+	{-1,-1}
 };
 
 static int
@@ -801,12 +807,12 @@ findkey(int c)
 
 static const int extendedkeys[][3]=
 {
-        {KEY_INSERT,0xE0,0x70},{KEY_HOME,0xE0,0x6C},{KEY_PGUP,0xE0,0x7D},
-        {KEY_DEL,0xE0,0x71},{KEY_END, 0xE0,0x69},{KEY_PGDN,0xE0,0x7A},
-        {KEY_UP,0xE0,0x75},{KEY_LEFT,0xE0,0x6B},{KEY_DOWN,0xE0,0x72},
-        {KEY_RIGHT,0xE0,0x74},{KEY_SLASH_PAD,0xE0,0x4A},{KEY_ENTER_PAD,0xE0,0x5A},
-        {KEY_ALTGR,0xE0,0x11},{KEY_RCONTROL,0xE0,0x14},
-        {-1,-1,-1}
+	{ALLEGRO_KEY_INSERT,0xE0,0x70},{ALLEGRO_KEY_HOME,0xE0,0x6C},{ALLEGRO_KEY_PGUP,0xE0,0x7D},
+	{ALLEGRO_KEY_DELETE,0xE0,0x71},{ALLEGRO_KEY_END, 0xE0,0x69},{ALLEGRO_KEY_PGDN,0xE0,0x7A},
+	{ALLEGRO_KEY_UP,0xE0,0x75},{ALLEGRO_KEY_LEFT,0xE0,0x6B},{ALLEGRO_KEY_DOWN,0xE0,0x72},
+	{ALLEGRO_KEY_RIGHT,0xE0,0x74},{ALLEGRO_KEY_PAD_SLASH,0xE0,0x4A},{ALLEGRO_KEY_PAD_ENTER,0xE0,0x5A},
+	{ALLEGRO_KEY_ALTGR,0xE0,0x11},{ALLEGRO_KEY_RCTRL,0xE0,0x14},
+	{-1,-1,-1}
 };
 
 static int
@@ -842,23 +848,26 @@ keyboard_poll(void)
 {
 	int c;
 
+	ALLEGRO_KEYBOARD_STATE keyboard_state;
+	al_get_keyboard_state(&keyboard_state);
+
 	for (c = 0; c < 128; c++) {
 		int idx;
 
-		if (key[c] == kbd.keys2[c]) {
+		if (al_key_down(&keyboard_state, c) == kbd.keys2[c]) {
 			/* no change in state */
 			continue;
 		}
 
-		kbd.keys2[c] = key[c];
+		kbd.keys2[c] = al_key_down(&keyboard_state, c);
 #ifdef RPCEMU_MACOSX
 		/* map Cmd-F12 to Break on OS X because Apple laptops don't have a Break key
 		   (F15 is equivalent to Break on Apple desktop keyboards) */
-		if (c == KEY_F12 && kbd.keys2[KEY_F12] && (key_shifts & KB_COMMAND_FLAG)) {
+		if (c == ALLEGRO_KEY_F12 && kbd.keys2[ALLEGRO_KEY_F12] && (key_shifts & KB_COMMAND_FLAG)) {
 			/* Cmd-F12 - Translate to break */
 			kbd.f12transtobreak = 1;
 			ps2_queue_break();
-		} else if (c == KEY_F12 && !kbd.keys2[KEY_F12] && kbd.f12transtobreak) {
+		} else if (c == ALLEGRO_KEY_F12 && !kbd.keys2[ALLEGRO_KEY_F12] && kbd.f12transtobreak) {
 			/* F12 key down corresponding to this key up was
 			   translated to break - eat the key up event
 			   (otherwise the emulated Risc PC would receive a
@@ -868,7 +877,7 @@ keyboard_poll(void)
 #endif
 		if ((idx = findkey(c)) != -1) {
 #ifdef RPCEMU_MACOSX
-			if (c == KEY_F12 && kbd.keys2[KEY_F12]) {
+			if (c == ALLEGRO_KEY_F12 && kbd.keys2[ALLEGRO_KEY_F12]) {
 				/* F12 key down was NOT translated to break */
 				kbd.f12transtobreak = 0;
 			}
@@ -890,7 +899,7 @@ keyboard_poll(void)
 			/* second of 2-byte scan code  */
 			ps2_queue(&kbd.queue, extendedkeys[idx][2]);
 
-		} else if (c == KEY_PAUSE) {
+		} else if (c == ALLEGRO_KEY_PAUSE) {
 			ps2_queue_break();
 		} else {
 			/* unhandled key */
@@ -919,28 +928,33 @@ static int activex[5],activey[5];
 static void
 mouse_get_osxy(int *x, int *y, int *osx, int *osy)
 {
-        assert(mousehack);
+	assert(mousehack);
 
-        *osy=(getys()<<1)-(mouse_y<<1);
-        if (*osy<mt) *osy=mt;
-        if (*osy>mb) *osy=mb;
-        *y=((getys()<<1)-*osy)>>1;
+	/* Get the mouse state */
+	ALLEGRO_MOUSE_STATE mouse_state;
+	al_get_mouse_state(&mouse_state);
 
-        *osx=mouse_x<<1;
-        if (*osx>mr) *osx=mr;
-        if (*osx<ml) *osx=ml;
-        *x=*osx>>1;
+	*osy=(getys()<<1)-(mouse_state.y<<1);
+	if (*osy<mt) *osy=mt;
+	if (*osy>mb) *osy=mb;
+	*y=((getys()<<1)-*osy)>>1;
 
-        if (((mouse_y != *y) || (mouse_x != *x)) && mousehack)
-        {
-                /* Restrict the pointer to the bounding box, unless the 
-                   box is greater than or equal to the full screen size */
-                if ((ml > 0) || (mr <= ((getxs()-1)<<1)) ||
-                    (mt > 0) || (mb <= ((getys()-1)<<1)))
-                {
-                        position_mouse(*x,*y);
-                }
-        }
+	*osx=mouse_state.x<<1;
+	if (*osx>mr) *osx=mr;
+	if (*osx<ml) *osx=ml;
+	*x=*osx>>1;
+
+	if (((mouse_state.y != *y) || (mouse_state.x != *x)) && mousehack)
+	{
+		/* Restrict the pointer to the bounding box, unless the 
+		   box is greater than or equal to the full screen size */
+		if ((ml > 0) || (mr <= ((getxs()-1)<<1)) ||
+		    (mt > 0) || (mb <= ((getys()-1)<<1)))
+		{
+			al_set_mouse_axis(0, *x);
+			al_set_mouse_axis(1, *y);
+		}
+	}
 }
 
 /**
@@ -953,19 +967,19 @@ mouse_get_osxy(int *x, int *y, int *osx, int *osy)
 void
 mouse_hack_osword_21_4(uint32_t a)
 {
-        int x;
-        int y;
-        int osx;
-        int osy;
+	int x;
+	int y;
+	int osx;
+	int osy;
 
-        assert(mousehack);
+	assert(mousehack);
 
-        mouse_get_osxy(&x, &y, &osx, &osy);
+	mouse_get_osxy(&x, &y, &osx, &osy);
 
-        writememb(a+1,osy&0xFF);
-        writememb(a+2,(osy>>8)&0xFF);
-        writememb(a+3,osx&0xFF);
-        writememb(a+4,(osx>>8)&0xFF);
+	writememb(a+1,osy&0xFF);
+	writememb(a+2,(osy>>8)&0xFF);
+	writememb(a+3,osx&0xFF);
+	writememb(a+4,(osx>>8)&0xFF);
 }
 
 /**
@@ -979,10 +993,10 @@ mouse_hack_osword_21_4(uint32_t a)
 void
 mouse_hack_get_pos(int *x, int *y)
 {
-        int osx;
-        int osy;
+	int osx;
+	int osy;
 
-        assert(mousehack);
+	assert(mousehack);
 
 	if (cursor_linked) {
 		/* Cursor is at current mouse pointer pos */
@@ -1007,16 +1021,16 @@ mouse_hack_get_pos(int *x, int *y)
 void
 mouse_hack_osword_21_0(uint32_t a)
 {
-        int num=readmemb(a+1);
+	int num=readmemb(a+1);
 
-        assert(mousehack);
+	assert(mousehack);
 
 	/* Reject any pointer shapes not in range 0-4 */
-        if (num > 4)
+	if (num > 4)
 		return;
 
-        activex[num]=readmemb(a+4);
-        activey[num]=readmemb(a+5);
+	activex[num]=readmemb(a+4);
+	activey[num]=readmemb(a+5);
 }
 
 /**
@@ -1065,36 +1079,42 @@ mouse_hack_osbyte_106(uint32_t a)
 void
 mouse_hack_osmouse(void)
 {
-        int32_t temp;
+	ALLEGRO_MOUSE_STATE mouse_state;
+	ALLEGRO_KEYBOARD_STATE keyboard_state;
+	int32_t temp;
 
-        assert(mousehack);
+	assert(mousehack);
 
-        temp = (getys() << 1) - (mouse_y << 1); /* Allegro */
-        if (temp<mt) temp=mt;
-        if (temp>mb) temp=mb;
-        arm.reg[1] = temp;                      /* R1 = mouse y coordinate */
+	/* Get the mouse/keyboard state */
+	al_get_mouse_state(&mouse_state);
+	al_get_keyboard_state(&keyboard_state);
 
-        temp = mouse_x << 1;                    /* Allegro */
-        if (temp>mr) temp=mr;
-        if (temp<ml) temp=ml;
-        arm.reg[0] = temp;                      /* R0 = mouse x coordinate */
+	temp = (getys() << 1) - (mouse_state.y << 1); /* Allegro */
+	if (temp<mt) temp=mt;
+	if (temp>mb) temp=mb;
+	arm.reg[1] = temp;		      /* R1 = mouse y coordinate */
 
-        temp=0;
-	if (mouse_b & 1) temp |= 4;             /* Left button */
+	temp = mouse_state.x << 1;		    /* Allegro */
+	if (temp>mr) temp=mr;
+	if (temp<ml) temp=ml;
+	arm.reg[0] = temp;		      /* R0 = mouse x coordinate */
+
+	temp=0;
+	if (mouse_state.buttons & 1) temp |= 4;	     /* Left button */
 	if (config.mousetwobutton) {
 		/* To help people with only two buttons on their mouse, swap
 		   the behaviour of middle and right buttons */
-		if (mouse_b & 2) temp |= 2;             /* Middle button */
-		if (mouse_b & 4) temp |= 1;             /* Right button */
-		if (key[KEY_MENU] || key[KEY_ALTGR]) temp |= 1;
+		if (mouse_state.buttons & 2) temp |= 2;	     /* Middle button */
+		if (mouse_state.buttons & 4) temp |= 1;	     /* Right button */
+		if (al_key_down(&keyboard_state, ALLEGRO_KEY_MENU) || al_key_down(&keyboard_state, ALLEGRO_KEY_ALTGR)) temp |= 1;
 	} else {
-		if (mouse_b & 2) temp |= 1;             /* Right button */
-		if (mouse_b & 4) temp |= 2;             /* Middle button */
-		if (key[KEY_MENU] || key[KEY_ALTGR]) temp |= 2;
+		if (mouse_state.buttons & 2) temp |= 1;	     /* Right button */
+		if (mouse_state.buttons & 4) temp |= 2;	     /* Middle button */
+		if (al_key_down(&keyboard_state, ALLEGRO_KEY_MENU) || al_key_down(&keyboard_state, ALLEGRO_KEY_ALTGR)) temp |= 2;
 	}
-        arm.reg[2] = temp;                      /* R2 = mouse buttons */
+	arm.reg[2] = temp;		      /* R2 = mouse buttons */
 
-        arm.reg[3] = 0;                         /* R3 = time of button change */
+	arm.reg[3] = 0;			 /* R3 = time of button change */
 }
 
 /**
@@ -1107,10 +1127,10 @@ mouse_hack_osmouse(void)
 void
 mouse_hack_osword_21_1(uint32_t a)
 {
-        assert(mousehack);
+	assert(mousehack);
 
-        ml=readmemb(a+1)|(readmemb(a+2)<<8);
-        mt=readmemb(a+3)|(readmemb(a+4)<<8);
-        mr=readmemb(a+5)|(readmemb(a+6)<<8);
-        mb=readmemb(a+7)|(readmemb(a+8)<<8);
+	ml=readmemb(a+1)|(readmemb(a+2)<<8);
+	mt=readmemb(a+3)|(readmemb(a+4)<<8);
+	mr=readmemb(a+5)|(readmemb(a+6)<<8);
+	mb=readmemb(a+7)|(readmemb(a+8)<<8);
 }

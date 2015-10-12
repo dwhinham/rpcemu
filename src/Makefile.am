@@ -7,7 +7,7 @@ CLEANFILES = $(noinst_SCRIPTS)
 ../rpcemu: rpcemu
 	cp rpcemu ..
 
-rpcemu_CFLAGS = $(allegro_CFLAGS)
+rpcemu_CFLAGS = -I/usr/include/allegro5
 
 # workaround for Win32 Allegro, which has `allegro-config' missing
 if OS_WIN

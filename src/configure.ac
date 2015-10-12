@@ -92,8 +92,8 @@ AC_ISC_POSIX
 # NOTE: For the following Autoconf macro to be supported, you need to extract
 #       allegro.m4 from the DOS/Windows Allegro sources (the file is contained
 #       in `misc') and copy it to this directory or MSYS's `/share/aclocal'.
-if test "$OS" != "win"; then
-   AM_PATH_ALLEGRO([4.2.2], , AC_MSG_ERROR(building RPCEmu requires Allegro to be installed))
-fi
+#if test "$OS" != "win"; then
+#   AM_PATH_ALLEGRO([4.2.2], , AC_MSG_ERROR(building RPCEmu requires Allegro to be installed))
+#fi
 
 AC_OUTPUT([Makefile])

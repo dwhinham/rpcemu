@@ -5,6 +5,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <allegro.h>
 #include "rpcemu.h"
 #include "mem.h"
@@ -35,15 +36,15 @@ char discname[2][260]={"boot.adf","notboot.adf"};
 Machine machine; /**< The details of the current machine being emulated */
 
 /** Array of details of models the emulator can emulate, must be kept in sync with
-    Model enum in rpcemu.h */
+	Model enum in rpcemu.h */
 const Model_Details models[] = {
-	{ "Risc PC - ARM610",    "RPC610", CPUModel_ARM610,    IOMDType_IOMD,      SuperIOType_FDC37C665GT, I2C_PCF8583 },
-	{ "Risc PC - ARM710",    "RPC710", CPUModel_ARM710,    IOMDType_IOMD,      SuperIOType_FDC37C665GT, I2C_PCF8583 },
-	{ "Risc PC - StrongARM", "RPCSA",  CPUModel_SA110,     IOMDType_IOMD,      SuperIOType_FDC37C665GT, I2C_PCF8583 },
-	{ "A7000",               "A7000",  CPUModel_ARM7500,   IOMDType_ARM7500,   SuperIOType_FDC37C665GT, I2C_PCF8583 },
-	{ "A7000+",              "A7000+", CPUModel_ARM7500FE, IOMDType_ARM7500FE, SuperIOType_FDC37C665GT, I2C_PCF8583 },
-	{ "Risc PC - ARM810",    "RPC810", CPUModel_ARM810,    IOMDType_IOMD,      SuperIOType_FDC37C665GT, I2C_PCF8583 },
-	{ "Phoebe (RPC2)",       "Phoebe", CPUModel_SA110,     IOMDType_IOMD2,     SuperIOType_FDC37C672,   I2C_PCF8583 | I2C_SPD_DIMM0 }
+	{ "Risc PC - ARM610",	"RPC610", CPUModel_ARM610,	IOMDType_IOMD,	  SuperIOType_FDC37C665GT, I2C_PCF8583 },
+	{ "Risc PC - ARM710",	"RPC710", CPUModel_ARM710,	IOMDType_IOMD,	  SuperIOType_FDC37C665GT, I2C_PCF8583 },
+	{ "Risc PC - StrongARM", "RPCSA",  CPUModel_SA110,	 IOMDType_IOMD,	  SuperIOType_FDC37C665GT, I2C_PCF8583 },
+	{ "A7000",			   "A7000",  CPUModel_ARM7500,   IOMDType_ARM7500,   SuperIOType_FDC37C665GT, I2C_PCF8583 },
+	{ "A7000+",			  "A7000+", CPUModel_ARM7500FE, IOMDType_ARM7500FE, SuperIOType_FDC37C665GT, I2C_PCF8583 },
+	{ "Risc PC - ARM810",	"RPC810", CPUModel_ARM810,	IOMDType_IOMD,	  SuperIOType_FDC37C665GT, I2C_PCF8583 },
+	{ "Phoebe (RPC2)",	   "Phoebe", CPUModel_SA110,	 IOMDType_IOMD2,	 SuperIOType_FDC37C672,   I2C_PCF8583 | I2C_SPD_DIMM0 }
 };
 
 Config config = {
@@ -72,7 +73,7 @@ Perf perf = {
 	0.0f, /* mhz */
 	0.0f, /* tlb_sec */
 	0.0f, /* flush_sec */
-	0,    /* mips_count */
+	0,	/* mips_count */
 	0.0f  /* mips_total */
 };
 
@@ -81,6 +82,8 @@ int cyccount = 0;
 int drawscre = 0;
 int mousecapture = 0;
 int quited = 0;
+
+static ALLEGRO_TIMER* mips_timer;
 
 static FILE *arclog; /* Log file handle */
 
@@ -94,15 +97,15 @@ static void saveconfig(void);
  * Used to report sections of code that have not been implemented yet.
  * Do not use this function directly. Use the macro UNIMPLEMENTED() instead.
  *
- * @param file    File function is called from
- * @param line    Line function is called from
+ * @param file	File function is called from
+ * @param line	Line function is called from
  * @param section Section code is missing from eg. "IOMD register" or
- *                "HostFS filecore message"
+ *				"HostFS filecore message"
  * @param format  Section specific information
- * @param ...     Section specific information variable arguments
+ * @param ...	 Section specific information variable arguments
  */
 void UNIMPLEMENTEDFL(const char *file, unsigned line, const char *section,
-                     const char *format, ...)
+					 const char *format, ...)
 {
 	char buffer[1024];
 	va_list arg_list;
@@ -116,11 +119,11 @@ void UNIMPLEMENTEDFL(const char *file, unsigned line, const char *section,
 	va_end(arg_list);
 
 	rpclog("UNIMPLEMENTED: %s: %s(%u): %s\n",
-	       section, file, line, buffer);
+		section, file, line, buffer);
 
 	fprintf(stderr,
-	        "UNIMPLEMENTED: %s: %s(%u): %s\n",
-	        section, file, line, buffer);
+		"UNIMPLEMENTED: %s: %s(%u): %s\n",
+		section, file, line, buffer);
 }
 #endif /* _DEBUG */
 
@@ -128,7 +131,7 @@ void UNIMPLEMENTEDFL(const char *file, unsigned line, const char *section,
  * Write a message to the RPCEmu log file rpclog.txt
  *
  * @param format printf style format of message
- * @param ...    format specific arguments
+ * @param ...	format specific arguments
  */
 void
 rpclog(const char *format, ...)
@@ -188,25 +191,25 @@ resetrpc(void)
 {
 	rpclog("RPCEmu: Machine reset\n");
 
-        mem_reset(config.mem_size);
-        cp15_reset(machine.cpu_model);
-        resetarm(machine.cpu_model);
-        keyboard_reset();
+		mem_reset(config.mem_size);
+		cp15_reset(machine.cpu_model);
+		resetarm(machine.cpu_model);
+		keyboard_reset();
 	iomd_reset(machine.iomd_type);
 
-        reseti2c(machine.i2c_devices);
-        resetide();
-        superio_reset(machine.super_type);
+		reseti2c(machine.i2c_devices);
+		resetide();
+		superio_reset(machine.super_type);
 	i8042_reset();
-        podules_reset();
-        podulerom_reset(); // must be called after podules_reset()
-        hostfs_reset();
+		podules_reset();
+		podulerom_reset(); // must be called after podules_reset()
+		hostfs_reset();
 
 #ifdef RPCEMU_NETWORKING
 	network_reset();
 
 	if (config.network_type == NetworkType_EthernetBridging ||
-	    config.network_type == NetworkType_IPTunnelling)
+		config.network_type == NetworkType_IPTunnelling)
 	{
 		network_init();
 	}
@@ -249,8 +252,8 @@ rpcemu_log_information(void)
 	rpcemu_log_os();
 
 	/* Log Allegro information */
-	rpclog("Allegro version ID: %s\n", allegro_id);
-	rpclog("Host Colour Depth: %u\n", desktop_color_depth());
+	rpclog("Allegro version ID: %s\n", al_get_allegro_version());
+	/* rpclog("Host Colour Depth: %u\n", desktop_color_depth()); */
 
 	/* Log working directory */
 	if (getcwd(cwd, sizeof(cwd)) != NULL) {
@@ -273,9 +276,7 @@ startrpcemu(void)
 	   environment */
 	rpcemu_log_information();
 
-        install_keyboard(); /* allegro */
-        install_timer();    /* allegro */
-        install_mouse();    /* allegro */
+	al_init();
 
 	loadconfig();
 	hostfs_init();
@@ -283,27 +284,29 @@ startrpcemu(void)
 	cp15_init();
 	arm_init();
 	loadroms();
-        loadcmos();
-        fdc_adf_load("boot.adf",0);
-        fdc_adf_load("notboot.adf",1);
-        initvideo();
+	loadcmos();
+	fdc_adf_load("boot.adf", 0);
+	fdc_adf_load("notboot.adf", 1);
+	initvideo();
 
-        sound_init();
+	sound_init();
 
-        initcodeblocks();
-        iso_init();
-        if (config.cdromtype == 2) /* ISO */
-                iso_open(config.isoname);
-        initpodulerom();
+	initcodeblocks();
+	iso_init();
+	if (config.cdromtype == 2) /* ISO */
+			iso_open(config.isoname);
+	initpodulerom();
 
 	/* Other components are initialised in the same way as the hardware
 	   being reset */
 	resetrpc();
 
 	/* Call back the mips counting function every second */
-	install_int_ex(domips, MSEC_TO_TIMER(1000));
+	mips_timer = al_create_timer(1);
+	al_start_timer(mips_timer);
+	//install_int_ex(domips, MSEC_TO_TIMER(1000));
 
-        return 0;
+	return 0;
 }
 
 /**
@@ -318,16 +321,16 @@ execrpcemu(void)
 //	static int c;
 //	printf("Exec %i\n",c);
 //c++;
-        execarm(20000);
-        drawscr(drawscre);
-        if (drawscre>0)
-        {
-//                rpclog("Drawscre %i\n",drawscre);
-                drawscre--;
-                if (drawscre>5) drawscre=0;
-                
-                mouse_poll();
-        }
+	execarm(20000);
+	drawscr(drawscre);
+	if (drawscre>0)
+	{
+//		rpclog("Drawscre %i\n",drawscre);
+		drawscre--;
+		if (drawscre>5) drawscre=0;
+
+		mouse_poll();
+	}
 
 	keyboard_poll();
 }
@@ -340,17 +343,18 @@ execrpcemu(void)
 void
 endrpcemu(void)
 {
-        sound_thread_close();
-        closevideo();
-        iomd_end();
-        fdc_adf_save(discname[0], 0);
-        fdc_adf_save(discname[1], 1);
-        free(vram);
-        free(ram00);
-        free(ram01);
-        free(rom);
-        savecmos();
-        saveconfig();
+	al_destroy_timer(mips_timer);
+	sound_thread_close();
+	closevideo();
+	iomd_end();
+	fdc_adf_save(discname[0], 0);
+	fdc_adf_save(discname[1], 1);
+	free(vram);
+	free(ram00);
+	free(ram01);
+	free(rom);
+	savecmos();
+	saveconfig();
 
 #ifdef RPCEMU_NETWORKING
 	network_reset();
@@ -368,7 +372,7 @@ void
 rpcemu_model_changed(Model model)
 {
 	/* Cache details from the models[] array into the machine struct for speed of lookup */
-	machine.model       = model;
+	machine.model	   = model;
 	machine.cpu_model   = models[model].cpu_model;
 	machine.iomd_type   = models[model].iomd_type;
 	machine.super_type  = models[model].super_type;
@@ -384,15 +388,17 @@ rpcemu_model_changed(Model model)
 static void
 loadconfig(void)
 {
-        char fn[512];
-        const char *p;
+	const char *p;
 	Model model;
 	int i;
+	ALLEGRO_CONFIG* al_config;
+	ALLEGRO_PATH* path = al_create_path_for_directory(rpcemu_get_datadir());
 
-	append_filename(fn, rpcemu_get_datadir(), "rpc.cfg", 511);
-        set_config_file(fn);
+	al_append_path_component(path, "rpc.cfg");
+	al_config = al_load_config_file(al_path_cstr(path, ALLEGRO_NATIVE_PATH_SEP));
 
 	/* Copy the contents of the configfile to the log */
+	/*
 	{
 		const char **entries = NULL;
 		int n = list_config_entries(NULL, &entries);
@@ -400,12 +406,13 @@ loadconfig(void)
 
 		for (i = 0; i < n; i++) {
 			rpclog("loadconfig: %s = \"%s\"\n", entries[i],
-			       get_config_string(NULL, entries[i], "-"));
+				get_config_string(NULL, entries[i], "-"));
 		}
 		free_config_entries(&entries);
 	}
+	*/
 
-	p = get_config_string(NULL, "mem_size", NULL);
+	p = al_get_config_value(al_config, NULL, "mem_size");
 	if (p == NULL) {
 		config.mem_size = 16;
 	} else if (!strcmp(p, "4")) {
@@ -424,16 +431,16 @@ loadconfig(void)
 		config.mem_size = 16;
 	}
 
-        p = get_config_string(NULL,"vram_size",NULL);
-        if (!p) config.vrammask = 0x7FFFFF;
-        else if (!strcmp(p,"0"))   config.vrammask = 0;
-        else                       config.vrammask = 0x7FFFFF;
+	p = al_get_config_value(al_config, NULL, "vram_size");
+	if (!p) config.vrammask = 0x7FFFFF;
+	else if (!strcmp(p,"0"))   config.vrammask = 0;
+	else					   config.vrammask = 0x7FFFFF;
 
-	p = get_config_string(NULL, "model", NULL);
+	p = al_get_config_value(al_config, NULL, "model");
 	model = Model_RPCARM710;
 	if (p != NULL) {
 		for (i = 0; i < Model_MAX; i++) {
-			if (stricmp(p, models[i].name_config) == 0) {
+			if (strcasecmp(p, models[i].name_config) == 0) {
 				model = i;
 				break;
 			}
@@ -452,27 +459,27 @@ loadconfig(void)
 		config.vrammask = 0x3fffff;
 	}
 
-        config.soundenabled = get_config_int(NULL, "sound_enabled", 1);
-        config.stretchmode  = get_config_int(NULL, "stretch_mode",  0);
-        config.refresh      = get_config_int(NULL, "refresh_rate", 60);
-        config.cdromenabled = get_config_int(NULL, "cdrom_enabled", 0);
-        config.cdromtype    = get_config_int(NULL, "cdrom_type", 0);
+	config.soundenabled = strtol(al_get_config_value(al_config, NULL, "sound_enabled"), NULL, 10);
+	config.stretchmode  = strtol(al_get_config_value(al_config, NULL, "stretch_mode"), NULL, 10);
+	config.refresh		= strtol(al_get_config_value(al_config, NULL, "refresh_rate"), NULL, 10);
+	config.cdromenabled = strtol(al_get_config_value(al_config, NULL, "cdrom_enabled"), NULL, 10);
+	config.cdromtype	= strtol(al_get_config_value(al_config, NULL, "cdrom_type"), NULL, 10);
 
-        p = get_config_string(NULL, "cdrom_iso", NULL);
-        if (!p) strcpy(config.isoname, "");
-        else    strcpy(config.isoname, p);
+	p = al_get_config_value(al_config, NULL, "cdrom_iso");
+	if (!p) strcpy(config.isoname, "");
+	else	strcpy(config.isoname, p);
 
-        config.mousehackon    = get_config_int(NULL, "mouse_following", 1);
-        config.mousetwobutton = get_config_int(NULL, "mouse_twobutton", 0);
+	config.mousehackon	= strtol(al_get_config_value(al_config, NULL, "mouse_following"), NULL, 10);
+	config.mousetwobutton = strtol(al_get_config_value(al_config, NULL, "mouse_twobutton"), NULL, 10);
 
-	p = get_config_string(NULL, "network_type", NULL);
+	p = al_get_config_value(al_config, NULL, "network_type");
 	if (!p) {
 		config.network_type = NetworkType_Off;
-	} else if (!stricmp(p, "off")) {
+	} else if (!strcasecmp(p, "off")) {
 		config.network_type = NetworkType_Off;
-	} else if (!stricmp(p, "iptunnelling")) {
+	} else if (!strcasecmp(p, "iptunnelling")) {
 		config.network_type = NetworkType_IPTunnelling;
-	} else if (!stricmp(p, "ethernetbridging")) {
+	} else if (!strcasecmp(p, "ethernetbridging")) {
 		config.network_type = NetworkType_EthernetBridging;
 	} else {
 		rpclog("Unknown network_type '%s', defaulting to off\n", p);
@@ -481,25 +488,24 @@ loadconfig(void)
 
 	/* Take a copy of the string config values, to allow dynamic alteration
 	   later */
-	p = get_config_string(NULL, "username", NULL);
+	p = al_get_config_value(al_config, NULL, "username");
 	if (p) {
 		config.username = strdup(p);
 	}
-	p = get_config_string(NULL, "ipaddress", NULL);
+	p = al_get_config_value(al_config, NULL, "ipaddress");
 	if (p) {
 		config.ipaddress = strdup(p);
 	}
-	p = get_config_string(NULL, "macaddress", NULL);
+	p = al_get_config_value(al_config, NULL, "macaddress");
 	if (p) {
 		config.macaddress = strdup(p);
 	}
-	p = get_config_string(NULL, "bridgename", NULL);
+	p = al_get_config_value(al_config, NULL, "bridgename");
 	if (p) {
 		config.bridgename = strdup(p);
 	}
 
-	config.cpu_idle = get_config_int(NULL, "cpu_idle", 0);
-}
+	config.cpu_idle = strtol(al_get_config_value(al_config, NULL, "cpu_idle"), NULL, 10);}
 
 /**
  * Store the user's most recently chosen configuration to disc, for use next
@@ -510,31 +516,31 @@ loadconfig(void)
 static void
 saveconfig(void)
 {
-        char s[256];
+	char s[256];
 
 	sprintf(s, "%u", config.mem_size);
 	set_config_string(NULL, "mem_size", s);
 	sprintf(s, "%s", models[machine.model].name_config);
 	set_config_string(NULL, "model", s);
-        if (config.vrammask) set_config_string(NULL, "vram_size", "2");
-        else                 set_config_string(NULL, "vram_size", "0");
-        set_config_int(NULL, "sound_enabled",     config.soundenabled);
-        set_config_int(NULL, "stretch_mode",      config.stretchmode);
-        set_config_int(NULL, "refresh_rate",      config.refresh);
-        set_config_int(NULL, "cdrom_enabled",     config.cdromenabled);
-        set_config_int(NULL, "cdrom_type",        config.cdromtype);
-        set_config_string(NULL, "cdrom_iso",      config.isoname);
-        set_config_int(NULL, "mouse_following",   config.mousehackon);
-        set_config_int(NULL, "mouse_twobutton",   config.mousetwobutton);
+	if (config.vrammask) set_config_string(NULL, "vram_size", "2");
+	else				 set_config_string(NULL, "vram_size", "0");
+	set_config_int(NULL, "sound_enabled",	config.soundenabled);
+	set_config_int(NULL, "stretch_mode",	config.stretchmode);
+	set_config_int(NULL, "refresh_rate",	config.refresh);
+	set_config_int(NULL, "cdrom_enabled",	config.cdromenabled);
+	set_config_int(NULL, "cdrom_type",		config.cdromtype);
+	set_config_string(NULL, "cdrom_iso",	config.isoname);
+	set_config_int(NULL, "mouse_following",	config.mousehackon);
+	set_config_int(NULL, "mouse_twobutton",	config.mousetwobutton);
 
 	switch (config.network_type) {
-	case NetworkType_Off:              sprintf(s, "off"); break;
-	case NetworkType_EthernetBridging: sprintf(s, "ethernetbridging"); break;
-	case NetworkType_IPTunnelling:     sprintf(s, "iptunnelling"); break;
+	case NetworkType_Off:				sprintf(s, "off"); break;
+	case NetworkType_EthernetBridging:	sprintf(s, "ethernetbridging"); break;
+	case NetworkType_IPTunnelling:		sprintf(s, "iptunnelling"); break;
 	default:
 		/* Forgotten to add a new network type to the switch()? */
 		fatal("saveconfig(): unknown networktype %d\n",
-		      config.network_type);
+			  config.network_type);
 	}
 	set_config_string(NULL, "network_type", s);
 
@@ -566,7 +572,7 @@ saveconfig(void)
  * Load an .adf disc image into the specified drive. Save the previous disc
  * image before loading new.
  *
- * @param drive    RPC Drive number, 0 or 1
+ * @param drive	RPC Drive number, 0 or 1
  * @param filename Full filepath of new .adf to load
  */
 void
